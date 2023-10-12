@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<!--  Licensed to the .NET Foundation under one or more agreements. -->
+<!-- The .NET Foundation licenses this file to you under the MIT license. -->
+<html>
+
+<head>
+  <title>dotnet-wasm</title>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style type="text/css" media="screen">
+    body {
+        overflow: hidden;
+    }
+
+    #editor {
+        margin: 0;
+        position: absolute;
+        top: 50px;
+        bottom: 0;
+        left: 0;
+        right: 0;
+    }
+    .hidden {
+      display: none;
+    }
+
+    .toolbox {
+      position: absolute;
+      height: 300px;
+      margin: 0px;
+      bottom: 0px;
+      left: 0px;
+      right: 0px;
+      background-color: #EEEEEE;
+      z-index: 100;
+      border-top: 2px solid black;
+      padding: 4px;
+      overflow: scroll;
+    }
+
+    .toolbox > table {
+      
+    }
+  </style>
+  <script type='module' src="./main.js"></script>
+</head>
+<body>
+  <pre id="editor"></pre>
+  <div id="error-list" class="toolbox">
+    <table>
+      <tbody id="error-tbody"></tbody>
+    </table>
+  </div>
+  <script src="ace.js" type="text/javascript" charset="utf-8"></script>
+  <script src="ext-beautify.js" type="text/javascript" charset="utf-8"></script>
+  <script src="ext-searchbox.js" type="text/javascript" charset="utf-8"></script>
+  <script src="ext-language_tools.js"></script>
+  <script src="ext-error_marker.js"></script>
+
+  <script>
+    ace.require("ace/ext/language_tools");
+    var buildDom = ace.require("ace/lib/dom").buildDom;
+    var editor = ace.edit("editor");
+    editor.setTheme("ace/theme/eclipse");
+    editor.setFontSize(18);
+    editor.setShowPrintMargin(false);
+    editor.session.setTabSize(4);
+    editor.session.setUseSoftTabs(true);
+    editor.session.setMode("ace/mode/csharp");
+    editor.setOptions({
+        enableBasicAutocompletion: true,
+        enableSnippets: true,
+        enableLiveAutocompletion: true
+    });
+
+    var refs = {};
+    function updateToolbar() {
+        refs.buildButton.disabled = editor.getSession().getValue() == '';
+        refs.saveButton.disabled = editor.session.getUndoManager().isClean();
+    }
+    editor.on("input", updateToolbar);
+    const source = 
+`namespace WasmCompilerTest;
+using System;
+class Program {
+    public static void Main() {
+        Console.WriteLine("Hello from wasm.");
+    }
+}
+`
+    editor.session.setValue(localStorage.savedValue || source);
+    function save() {
+        localStorage.savedValue = editor.getValue();
+        editor.session.getUndoManager().markClean();
+        updateToolbar();
+    }
+    editor.commands.addCommand({
+        name: "save",
+        exec: save,
+        bindKey: { win: "ctrl-s", mac: "cmd-s" }
+    });
+
+    buildDom(["div", { class: "toolbar" },
+        ["button", {
+            ref: "saveButton",
+            onclick: save
+        }, "save"],
+        ["button", {
+            ref: "buildButton",
+            onclick: function() {
+                window.interop.MyClass.Greeting(editor.getSession().getValue());
+            }
+        }, "Build"],
+        ["button", {
+            ref: "toggleErrorButton",
+            onclick: function() {
+              let errorList = document.getElementById('error-list');
+              if (errorList.classList.contains('hidden')) errorList.classList.remove('hidden');
+              else (errorList.classList.add('hidden'));
+              console.log(123)
+            }
+        }, "Errors"],
+    ], document.body, refs);
+    document.body.appendChild(editor.container)
+  </script>
+</body>
+</html>
